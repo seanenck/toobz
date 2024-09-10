@@ -9,7 +9,7 @@ build: $(TARGET)
 $(TARGET): cmd/*.go go.mod *.go
 	go build $(GOFLAGS) -o $@ cmd/main.go
 
-check:
+check: $(TARGET)
 	go test ./...
 
 clean:
