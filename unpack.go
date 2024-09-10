@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"slices"
 )
 
 const (
@@ -16,6 +17,10 @@ const (
 )
 
 var (
+	// WriteDecompressOption handles writing the decompressed output (not the compressed output) after extraction
+	WriteDecompressOption = WriteOption{}
+	// ReadInfoParseBodyOption will enable parsing the body of the input
+	ReadInfoParseBodyOption = ReadInfoOption{}
 	// ErrIsInvalidContent indicates a generic error for bad header information
 	ErrIsInvalidContent = errors.New("invalid content data")
 	// LinuxMagic is the magic number for the Linux header field
@@ -33,6 +38,11 @@ var (
 )
 
 type (
+	// ReadInfoOption defines reading options
+	ReadInfoOption struct{}
+	// WriteOption handles writing options
+	WriteOption struct{}
+
 	// Datum are special fields within the file to assist in reading/loading information
 	Datum struct {
 		payload string
@@ -43,11 +53,6 @@ type (
 	check struct {
 		left  []uint8
 		right Datum
-	}
-	// Unpacker handles the core reading/parsing of the header/body
-	Unpacker struct {
-		Decompress bool
-		ParseBody  bool
 	}
 	// Header is the parsed zboot header information
 	Header struct {
@@ -63,9 +68,8 @@ type (
 	}
 	// BootInfo is the wrapper around the parsed header and body segment (if requested)
 	BootInfo struct {
-		Header   Header
-		body     []byte
-		unpacker Unpacker
+		Header Header
+		body   []byte
 	}
 )
 
@@ -118,7 +122,7 @@ func decompressGunzip(in []byte) ([]byte, error) {
 }
 
 // ReadInfo will read boot information from an input reader
-func (u Unpacker) ReadInfo(r *bytes.Reader) (BootInfo, error) {
+func ReadInfo(r *bytes.Reader, opts ...ReadInfoOption) (BootInfo, error) {
 	if r == nil {
 		return BootInfo{}, errors.New("reader is nil")
 	}
@@ -145,7 +149,7 @@ func (u Unpacker) ReadInfo(r *bytes.Reader) (BootInfo, error) {
 		return BootInfo{}, errors.New("invalid offset/payload, beyond size")
 	}
 	var sub []byte
-	if u.ParseBody {
+	if slices.Contains(opts, ReadInfoParseBodyOption) {
 		sub = make([]byte, hdr.PayloadSize)
 		n, err := r.ReadAt(sub, int64(hdr.PayloadOffset))
 		if err != nil {
@@ -155,7 +159,7 @@ func (u Unpacker) ReadInfo(r *bytes.Reader) (BootInfo, error) {
 			return BootInfo{}, errors.New("invalid seek, zero")
 		}
 	}
-	return BootInfo{Header: hdr, body: sub, unpacker: u}, nil
+	return BootInfo{Header: hdr, body: sub}, nil
 }
 
 // Body will get the parsed body
@@ -164,12 +168,12 @@ func (info BootInfo) Body() []byte {
 }
 
 // Write will write (and optionally decompress prior) the payload of the file
-func (info BootInfo) Write(w io.Writer) error {
+func (info BootInfo) Write(w io.Writer, opts ...WriteOption) error {
 	if len(info.body) == 0 {
 		return errors.New("no body")
 	}
 	sub := info.body
-	if info.unpacker.Decompress {
+	if slices.Contains(opts, WriteDecompressOption) {
 		found := false
 		t := fmt.Sprintf("%v", info.Header.CompressionType[:])
 		type decompressor struct {

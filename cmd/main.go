@@ -23,9 +23,6 @@ func unpack() error {
 	out := flag.String("out", "", "output file")
 	decompress := flag.Bool("decompress", false, "decompress the payload")
 	flag.Parse()
-	unpacker := toobz.Unpacker{}
-	unpacker.Decompress = *decompress
-	unpacker.ParseBody = true
 	input := *in
 	output := *out
 	if input == "" || output == "" {
@@ -36,7 +33,7 @@ func unpack() error {
 		return err
 	}
 	buf := bytes.NewReader(b)
-	info, err := unpacker.ReadInfo(buf)
+	info, err := toobz.ReadInfo(buf, toobz.ReadInfoParseBodyOption)
 	if err != nil {
 		return err
 	}
@@ -45,5 +42,9 @@ func unpack() error {
 		return err
 	}
 	defer w.Close()
-	return info.Write(w)
+	opts := []toobz.WriteOption{}
+	if *decompress {
+		opts = append(opts, toobz.WriteDecompressOption)
+	}
+	return info.Write(w, opts...)
 }

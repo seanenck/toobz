@@ -50,17 +50,16 @@ func TestDatum(t *testing.T) {
 }
 
 func TestReadInfo(t *testing.T) {
-	u := toobz.Unpacker{}
-	if _, err := u.ReadInfo(nil); err == nil || err.Error() != "reader is nil" {
+	if _, err := toobz.ReadInfo(nil); err == nil || err.Error() != "reader is nil" {
 		t.Errorf("invalid read info error: %v", err)
 	}
 	var data []byte
-	if _, err := u.ReadInfo(bytes.NewReader(data)); err == nil || err.Error() != "EOF" {
+	if _, err := toobz.ReadInfo(bytes.NewReader(data)); err == nil || err.Error() != "EOF" {
 		t.Errorf("invalid read info error, bad data: %v", err)
 	}
 	data = getTestData()
 	data[0] = 1
-	if _, err := u.ReadInfo(bytes.NewReader(data)); err == nil || !strings.Contains(err.Error(), "invalid content data") || !strings.Contains(err.Error(), "MZ") {
+	if _, err := toobz.ReadInfo(bytes.NewReader(data)); err == nil || !strings.Contains(err.Error(), "invalid content data") || !strings.Contains(err.Error(), "MZ") {
 		t.Errorf("invalid read info error, bad data header: %v", err)
 	}
 	data = getTestData()
@@ -68,7 +67,7 @@ func TestReadInfo(t *testing.T) {
 	data[9] = 0
 	data[10] = 0
 	data[11] = 0
-	if _, err := u.ReadInfo(bytes.NewReader(data)); err == nil || err.Error() != "payload size/offset is zero" {
+	if _, err := toobz.ReadInfo(bytes.NewReader(data)); err == nil || err.Error() != "payload size/offset is zero" {
 		t.Errorf("invalid read info error, bad data payload size/offset: %v", err)
 	}
 	data = getTestData()
@@ -76,7 +75,7 @@ func TestReadInfo(t *testing.T) {
 	data[13] = 0
 	data[14] = 0
 	data[15] = 0
-	if _, err := u.ReadInfo(bytes.NewReader(data)); err == nil || err.Error() != "payload size/offset is zero" {
+	if _, err := toobz.ReadInfo(bytes.NewReader(data)); err == nil || err.Error() != "payload size/offset is zero" {
 		t.Errorf("invalid read info error, bad data payload size/offset: %v", err)
 	}
 	data = getTestData()
@@ -88,7 +87,7 @@ func TestReadInfo(t *testing.T) {
 	data[13] = 255
 	data[14] = 255
 	data[15] = 255
-	if _, err := u.ReadInfo(bytes.NewReader(data)); err == nil || err.Error() != "invalid offset/payload, beyond size" {
+	if _, err := toobz.ReadInfo(bytes.NewReader(data)); err == nil || err.Error() != "invalid offset/payload, beyond size" {
 		t.Errorf("invalid read info error, bad data sizing: %v", err)
 	}
 	data = getTestData()
@@ -101,14 +100,12 @@ func TestReadInfo(t *testing.T) {
 		data = append(data, byte(i))
 		i += 1
 	}
-	if _, err := u.ReadInfo(bytes.NewReader(data)); err != nil {
+	if _, err := toobz.ReadInfo(bytes.NewReader(data)); err != nil {
 		t.Errorf("invalid error: %v", err)
 	}
 }
 
 func TestReadInfoBody(t *testing.T) {
-	u := toobz.Unpacker{}
-	u.ParseBody = true
 	data := getTestData()
 	data[12] = 1
 	data[13] = 0
@@ -119,7 +116,7 @@ func TestReadInfoBody(t *testing.T) {
 		data = append(data, byte(i))
 		i += 1
 	}
-	b, err := u.ReadInfo(bytes.NewReader(data))
+	b, err := toobz.ReadInfo(bytes.NewReader(data), toobz.ReadInfoParseBodyOption)
 	if err != nil {
 		t.Errorf("invalid info read: %v", err)
 	}
@@ -134,8 +131,6 @@ func TestWrite(t *testing.T) {
 	if err := info.Write(&b); err == nil || err.Error() != "no body" {
 		t.Errorf("invalid write: %v", err)
 	}
-	u := toobz.Unpacker{}
-	u.ParseBody = true
 	data := getTestData()
 	data[12] = 1
 	data[13] = 0
@@ -146,7 +141,7 @@ func TestWrite(t *testing.T) {
 		data = append(data, byte(i))
 		i += 1
 	}
-	read, _ := u.ReadInfo(bytes.NewReader(data))
+	read, _ := toobz.ReadInfo(bytes.NewReader(data), toobz.ReadInfoParseBodyOption)
 	b = bytes.Buffer{}
 	if err := read.Write(&b); err != nil {
 		t.Errorf("invalid write: %v", err)
@@ -158,9 +153,6 @@ func TestWrite(t *testing.T) {
 
 func TestWriteDecompress(t *testing.T) {
 	var b bytes.Buffer
-	u := toobz.Unpacker{}
-	u.ParseBody = true
-	u.Decompress = true
 	data := getTestData()
 	data[12] = 1
 	data[13] = 0
@@ -171,9 +163,9 @@ func TestWriteDecompress(t *testing.T) {
 		data = append(data, byte(i))
 		i += 1
 	}
-	read, _ := u.ReadInfo(bytes.NewReader(data))
+	read, _ := toobz.ReadInfo(bytes.NewReader(data), toobz.ReadInfoParseBodyOption)
 	b = bytes.Buffer{}
-	if err := read.Write(&b); err == nil || err.Error() != "unexpected EOF" {
+	if err := read.Write(&b, toobz.WriteDecompressOption); err == nil || err.Error() != "unexpected EOF" {
 		t.Errorf("invalid write: %v", err)
 	}
 	data = getTestData()
@@ -187,9 +179,9 @@ func TestWriteDecompress(t *testing.T) {
 		data = append(data, byte(i))
 		i += 1
 	}
-	read, _ = u.ReadInfo(bytes.NewReader(data))
+	read, _ = toobz.ReadInfo(bytes.NewReader(data), toobz.ReadInfoParseBodyOption)
 	b = bytes.Buffer{}
-	if err := read.Write(&b); err == nil || !strings.Contains(err.Error(), "unknown compression type") {
+	if err := read.Write(&b, toobz.WriteDecompressOption); err == nil || !strings.Contains(err.Error(), "unknown compression type") {
 		t.Errorf("invalid write, compression: %v", err)
 	}
 	data = getTestData()
@@ -209,9 +201,9 @@ func TestWriteDecompress(t *testing.T) {
 		data[i] = g[j]
 		j++
 	}
-	read, _ = u.ReadInfo(bytes.NewReader(data))
+	read, _ = toobz.ReadInfo(bytes.NewReader(data), toobz.ReadInfoParseBodyOption)
 	b = bytes.Buffer{}
-	if err := read.Write(&b); err == nil || !strings.Contains(err.Error(), "gzip: invalid header") {
+	if err := read.Write(&b, toobz.WriteDecompressOption); err == nil || !strings.Contains(err.Error(), "gzip: invalid header") {
 		t.Errorf("invalid write, compression: %v", err)
 	}
 }
@@ -232,9 +224,6 @@ func gzipData(s ...string) []byte {
 
 func TestWriteDecompressCheck(t *testing.T) {
 	var b bytes.Buffer
-	u := toobz.Unpacker{}
-	u.ParseBody = true
-	u.Decompress = true
 	data := getTestData()
 	data[12] = 45
 	data[13] = 0
@@ -253,9 +242,9 @@ func TestWriteDecompressCheck(t *testing.T) {
 		i++
 		j++
 	}
-	read, _ := u.ReadInfo(bytes.NewReader(data))
+	read, _ := toobz.ReadInfo(bytes.NewReader(data), toobz.ReadInfoParseBodyOption)
 	b = bytes.Buffer{}
-	if err := read.Write(&b); err == nil || !strings.Contains(err.Error(), "invalid response payload: 21") {
+	if err := read.Write(&b, toobz.WriteDecompressOption); err == nil || !strings.Contains(err.Error(), "invalid response payload: 21") {
 		t.Errorf("invalid write, compression: %v", err)
 	}
 	b = bytes.Buffer{}
@@ -277,9 +266,9 @@ func TestWriteDecompressCheck(t *testing.T) {
 		i++
 		j++
 	}
-	read, _ = u.ReadInfo(bytes.NewReader(data))
+	read, _ = toobz.ReadInfo(bytes.NewReader(data), toobz.ReadInfoParseBodyOption)
 	b = bytes.Buffer{}
-	if err := read.Write(&b); err == nil || !strings.Contains(err.Error(), "unknown payload type: [74 79 83 74]") {
+	if err := read.Write(&b, toobz.WriteDecompressOption); err == nil || !strings.Contains(err.Error(), "unknown payload type: [74 79 83 74]") {
 		t.Errorf("invalid write, payload: %v", err)
 	}
 	b = bytes.Buffer{}
@@ -302,7 +291,7 @@ func TestWriteDecompressCheck(t *testing.T) {
 		i++
 		j++
 	}
-	read, _ = u.ReadInfo(bytes.NewReader(data))
+	read, _ = toobz.ReadInfo(bytes.NewReader(data), toobz.ReadInfoParseBodyOption)
 	b = bytes.Buffer{}
 	if err := read.Write(&b); err != nil {
 		t.Errorf("invalid write: %v", err)
