@@ -3,7 +3,6 @@ package toobz_test
 import (
 	"bytes"
 	"compress/gzip"
-	_ "embed"
 	"encoding/base64"
 	"fmt"
 	"strings"
@@ -12,8 +11,7 @@ import (
 	"github.com/seanenck/toobz"
 )
 
-//go:embed data/testdata
-var testData string
+var testData = "TVoAAHppbWdIyQAA0tiyAAAAAAAAAAAAZ3ppcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADNI4KBQAAAAA=="
 
 func getTestData() []byte {
 	n, _ := base64.StdEncoding.DecodeString(testData)
