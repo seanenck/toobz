@@ -7,21 +7,19 @@ A Go implementation of un-zbooting an EFI zboot image (mainly for arm64).
 
 Clone and run
 ```
-go build -o toobz cmd/main.go
+make
 ```
 
 ## Usage
 
 To extract an image
 ```
-./toobz -in <image> -out <file>
+toobz -in <image> -out <file>
 ```
-
-(or just do `go run cmd/main.go ...`)
 
 To extract and decompress an image:
 ```
-./toobz -in <image> -out <file> -decompress
+toobz -in <image> -out <file> -decompress
 ```
 
 ## Reference
