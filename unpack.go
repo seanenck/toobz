@@ -52,7 +52,6 @@ type (
 	BootInfo struct {
 		Header   Header
 		body     []byte
-		valid    bool
 		unpacker Unpacker
 	}
 )
@@ -140,13 +139,14 @@ func (u Unpacker) ReadInfo(r *bytes.Reader) (BootInfo, error) {
 			return BootInfo{}, errors.New("invalid seek, zero")
 		}
 	}
-	return BootInfo{Header: hdr, body: sub, valid: true, unpacker: u}, nil
+	return BootInfo{Header: hdr, body: sub, unpacker: u}, nil
+}
+
+func (info BootInfo) Body() []byte {
+	return info.body
 }
 
 func (info BootInfo) Write(w io.Writer) error {
-	if !info.valid {
-		return errors.New("information is invalid")
-	}
 	if len(info.body) == 0 {
 		return errors.New("no body")
 	}
