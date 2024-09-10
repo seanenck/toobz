@@ -7,7 +7,7 @@ A Go implementation of un-zbooting an EFI zboot image (mainly for arm64).
 
 Clone and run
 ```
-go build toobz.go
+go build -o toobz cmd/main.go
 ```
 
 ## Usage
@@ -17,7 +17,7 @@ To extract an image
 ./toobz -in <image> -out <file>
 ```
 
-(or just do `go run toobz.go ...`)
+(or just do `go run cmd/main.go ...`)
 
 To extract and decompress an image:
 ```
