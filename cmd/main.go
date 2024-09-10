@@ -33,7 +33,7 @@ func unpack() error {
 		return err
 	}
 	buf := bytes.NewReader(b)
-	info, err := toobz.ReadInfo(buf, toobz.ReadInfoParseBodyOption)
+	info, err := toobz.ReadInfo(buf, toobz.ParseBodyOption)
 	if err != nil {
 		return err
 	}
@@ -44,7 +44,7 @@ func unpack() error {
 	defer w.Close()
 	opts := []toobz.WriteOption{}
 	if *decompress {
-		opts = append(opts, toobz.WriteDecompressOption)
+		opts = append(opts, toobz.DecompressOption)
 	}
 	return info.Write(w, opts...)
 }

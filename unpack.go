@@ -17,10 +17,10 @@ const (
 )
 
 var (
-	// WriteDecompressOption handles writing the decompressed output (not the compressed output) after extraction
-	WriteDecompressOption = WriteOption{}
-	// ReadInfoParseBodyOption will enable parsing the body of the input
-	ReadInfoParseBodyOption = ReadInfoOption{}
+	// DecompressOption handles writing the decompressed output (not the compressed output) after extraction
+	DecompressOption = WriteOption{}
+	// ParseBodyOption will enable parsing the body of the input
+	ParseBodyOption = ReadInfoOption{}
 	// ErrIsInvalidContent indicates a generic error for bad header information
 	ErrIsInvalidContent = errors.New("invalid content data")
 	// LinuxMagic is the magic number for the Linux header field
@@ -149,7 +149,7 @@ func ReadInfo(r *bytes.Reader, opts ...ReadInfoOption) (BootInfo, error) {
 		return BootInfo{}, errors.New("invalid offset/payload, beyond size")
 	}
 	var sub []byte
-	if slices.Contains(opts, ReadInfoParseBodyOption) {
+	if slices.Contains(opts, ParseBodyOption) {
 		sub = make([]byte, hdr.PayloadSize)
 		n, err := r.ReadAt(sub, int64(hdr.PayloadOffset))
 		if err != nil {
@@ -173,7 +173,7 @@ func (info BootInfo) Write(w io.Writer, opts ...WriteOption) error {
 		return errors.New("no body")
 	}
 	sub := info.body
-	if slices.Contains(opts, WriteDecompressOption) {
+	if slices.Contains(opts, DecompressOption) {
 		found := false
 		t := fmt.Sprintf("%v", info.Header.CompressionType[:])
 		type decompressor struct {
