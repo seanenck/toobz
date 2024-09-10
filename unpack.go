@@ -1,3 +1,4 @@
+// Package toobz implements the means to unpack an EFI zboot file
 package toobz
 
 import (
@@ -10,20 +11,29 @@ import (
 )
 
 const (
+	// ARM64MagicOffset the decompress offset to find magic value to detect ARM/RISC types
 	ARM64MagicOffset = 56
 )
 
 var (
+	// ErrIsInvalidContent indicates a generic error for bad header information
 	ErrIsInvalidContent = errors.New("invalid content data")
-	LinuxMagic          = Datum{payload: "Linux", raw: []uint8{205, 35, 130, 129}}
-	ARM                 = Datum{payload: "ARM", addByte: 100}
-	RISC                = Datum{payload: "RSC", addByte: 5}
-	Gzip                = Datum{payload: "gzip", padding: 32}
-	MSDOSMagic          = Datum{payload: "MZ"}
-	ZImg                = Datum{payload: "zimg"}
+	// LinuxMagic is the magic number for the Linux header field
+	LinuxMagic = Datum{payload: "Linux", raw: []uint8{205, 35, 130, 129}}
+	// ARM is the magic value to indicate ARM
+	ARM = Datum{payload: "ARM", addByte: 100}
+	// RISC is the magic value to indicate RISC
+	RISC = Datum{payload: "RSC", addByte: 5}
+	// Gzip indicates a gzip payload to decompress
+	Gzip = Datum{payload: "gzip", padding: 32}
+	// MSDOSMagic is the magic indicator for the MSDOS field
+	MSDOSMagic = Datum{payload: "MZ"}
+	// ZImg is the indicator that the header is for zimg
+	ZImg = Datum{payload: "zimg"}
 )
 
 type (
+	// Datum are special fields within the file to assist in reading/loading information
 	Datum struct {
 		payload string
 		padding int
@@ -34,10 +44,12 @@ type (
 		left  []uint8
 		right Datum
 	}
+	// Unpacker handles the core reading/parsing of the header/body
 	Unpacker struct {
 		Decompress bool
 		ParseBody  bool
 	}
+	// Header is the parsed zboot header information
 	Header struct {
 		MSDOSMagic      [2]uint8
 		Reserved0       [2]uint8
@@ -49,6 +61,7 @@ type (
 		LinuxMagic      [4]uint8
 		PEHeaderOffset  uint32
 	}
+	// BootInfo is the wrapper around the parsed header and body segment (if requested)
 	BootInfo struct {
 		Header   Header
 		body     []byte
@@ -56,10 +69,12 @@ type (
 	}
 )
 
+// Value will get the raw string name value for the data item
 func (d Datum) Value() string {
 	return d.payload
 }
 
+// Data will get the expected data value for an item (the actual value of interest)
 func (d Datum) Data() []uint8 {
 	if len(d.raw) > 0 {
 		return d.raw
@@ -102,6 +117,7 @@ func decompressGunzip(in []byte) ([]byte, error) {
 	return io.ReadAll(r)
 }
 
+// ReadInfo will read boot information from an input reader
 func (u Unpacker) ReadInfo(r *bytes.Reader) (BootInfo, error) {
 	if r == nil {
 		return BootInfo{}, errors.New("reader is nil")
@@ -142,10 +158,12 @@ func (u Unpacker) ReadInfo(r *bytes.Reader) (BootInfo, error) {
 	return BootInfo{Header: hdr, body: sub, unpacker: u}, nil
 }
 
+// Body will get the parsed body
 func (info BootInfo) Body() []byte {
 	return info.body
 }
 
+// Write will write (and optionally decompress prior) the payload of the file
 func (info BootInfo) Write(w io.Writer) error {
 	if len(info.body) == 0 {
 		return errors.New("no body")

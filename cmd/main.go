@@ -1,4 +1,4 @@
-// Package main unpacks an EFI zboot file
+// Package main is a CLI wrapper for unpacking
 package main
 
 import (

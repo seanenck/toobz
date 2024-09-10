@@ -110,7 +110,6 @@ func TestReadInfoBody(t *testing.T) {
 	u := toobz.Unpacker{}
 	u.ParseBody = true
 	data := getTestData()
-	data = getTestData()
 	data[12] = 1
 	data[13] = 0
 	data[14] = 0
@@ -138,7 +137,6 @@ func TestWrite(t *testing.T) {
 	u := toobz.Unpacker{}
 	u.ParseBody = true
 	data := getTestData()
-	data = getTestData()
 	data[12] = 1
 	data[13] = 0
 	data[14] = 0
@@ -164,7 +162,6 @@ func TestWriteDecompress(t *testing.T) {
 	u.ParseBody = true
 	u.Decompress = true
 	data := getTestData()
-	data = getTestData()
 	data[12] = 1
 	data[13] = 0
 	data[14] = 0
