@@ -2,10 +2,6 @@ toobz
 ===
 
 A Go implementation of un-zbooting an EFI zboot image (mainly for arm64).
-Unlike similar tools, it does NOT attempt to decompress the resulting image
-(e.g. a gzip file) and instead leaves that to the user/common tooling (e.g. 
-`gzip -d <file>`) and simply writes the compressed payload to the specified
-output path.
 
 ## Build
 
@@ -22,6 +18,11 @@ To extract an image
 ```
 
 (or just do `go run toobz.go ...`)
+
+To extract and decompress an image:
+```
+./toobz -in <image> -out <file> -decompress
+```
 
 ## Reference
 
