@@ -46,5 +46,5 @@ func unpack() error {
 	if *decompress {
 		opts = append(opts, toobz.DecompressOption)
 	}
-	return info.Unpack(w, opts...)
+	return toobz.Unpack(info, w, opts...)
 }

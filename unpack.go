@@ -68,8 +68,19 @@ type (
 	}
 	// BootInfo is the wrapper around the parsed header and body segment (if requested)
 	BootInfo struct {
-		Header Header
+		header Header
 		body   []byte
+	}
+	// Reader is the interface to read underlying boot information from an input
+	Reader interface {
+		io.ReaderAt
+		Len() int
+		io.Reader
+	}
+	// Package is data ready to unpack/be used
+	Package interface {
+		Body() []byte
+		Headers() Header
 	}
 )
 
@@ -122,7 +133,7 @@ func decompressGunzip(in []byte) ([]byte, error) {
 }
 
 // ReadInfo will read boot information from an input reader
-func ReadInfo(r *bytes.Reader, opts ...ReadInfoOption) (BootInfo, error) {
+func ReadInfo(r Reader, opts ...ReadInfoOption) (BootInfo, error) {
 	if r == nil {
 		return BootInfo{}, errors.New("reader is nil")
 	}
@@ -159,7 +170,7 @@ func ReadInfo(r *bytes.Reader, opts ...ReadInfoOption) (BootInfo, error) {
 			return BootInfo{}, errors.New("invalid seek, zero")
 		}
 	}
-	return BootInfo{Header: hdr, body: sub}, nil
+	return BootInfo{header: hdr, body: sub}, nil
 }
 
 // Body will get the parsed body
@@ -167,15 +178,24 @@ func (info BootInfo) Body() []byte {
 	return info.body
 }
 
+// Headers will get the underlying headers for the boot info
+func (info BootInfo) Headers() Header {
+	return info.header
+}
+
 // Unpack will write (and optionally decompress prior) the payload of the file
-func (info BootInfo) Unpack(w io.Writer, opts ...UnpackOption) error {
-	if len(info.body) == 0 {
+func Unpack(src Package, dst io.Writer, opts ...UnpackOption) error {
+	if src == nil {
+		return errors.New("unpacker is nil")
+	}
+	sub := src.Body()
+	if len(sub) == 0 {
 		return errors.New("no body")
 	}
-	sub := info.body
 	if slices.Contains(opts, DecompressOption) {
 		found := false
-		t := fmt.Sprintf("%v", info.Header.CompressionType[:])
+		hdr := src.Headers()
+		t := fmt.Sprintf("%v", hdr.CompressionType[:])
 		type decompressor struct {
 			bodyType []uint8
 			fxn      func([]byte) ([]byte, error)
@@ -216,6 +236,6 @@ func (info BootInfo) Unpack(w io.Writer, opts ...UnpackOption) error {
 			return fmt.Errorf("unknown payload type: %v", val)
 		}
 	}
-	_, err := w.Write(sub)
+	_, err := dst.Write(sub)
 	return err
 }
