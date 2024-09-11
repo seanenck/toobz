@@ -18,7 +18,7 @@ const (
 
 var (
 	// DecompressOption handles writing the decompressed output (not the compressed output) after extraction
-	DecompressOption = WriteOption{}
+	DecompressOption = UnpackOption{}
 	// ParseBodyOption will enable parsing the body of the input
 	ParseBodyOption = ReadInfoOption{}
 	// ErrIsInvalidContent indicates a generic error for bad header information
@@ -40,8 +40,8 @@ var (
 type (
 	// ReadInfoOption defines reading options
 	ReadInfoOption struct{}
-	// WriteOption handles writing options
-	WriteOption struct{}
+	// UnpackOption handles writing options
+	UnpackOption struct{}
 
 	// Datum are special fields within the file to assist in reading/loading information
 	Datum struct {
@@ -167,8 +167,8 @@ func (info BootInfo) Body() []byte {
 	return info.body
 }
 
-// Write will write (and optionally decompress prior) the payload of the file
-func (info BootInfo) Write(w io.Writer, opts ...WriteOption) error {
+// Unpack will write (and optionally decompress prior) the payload of the file
+func (info BootInfo) Unpack(w io.Writer, opts ...UnpackOption) error {
 	if len(info.body) == 0 {
 		return errors.New("no body")
 	}

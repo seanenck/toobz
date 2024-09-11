@@ -42,9 +42,9 @@ func unpack() error {
 		return err
 	}
 	defer w.Close()
-	opts := []toobz.WriteOption{}
+	opts := []toobz.UnpackOption{}
 	if *decompress {
 		opts = append(opts, toobz.DecompressOption)
 	}
-	return info.Write(w, opts...)
+	return info.Unpack(w, opts...)
 }
