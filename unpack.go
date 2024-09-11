@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"slices"
 )
 
@@ -17,10 +18,6 @@ const (
 )
 
 var (
-	// DecompressOption handles writing the decompressed output (not the compressed output) after extraction
-	DecompressOption = UnpackOption{}
-	// ParseBodyOption will enable parsing the body of the input
-	ParseBodyOption = ReadInfoOption{}
 	// ErrIsInvalidContent indicates a generic error for bad header information
 	ErrIsInvalidContent = errors.New("invalid content data")
 	// LinuxMagic is the magic number for the Linux header field
@@ -37,11 +34,25 @@ var (
 	ZImg = Datum{payload: "zimg"}
 )
 
+const (
+	// ParseBodyOption will enable parsing the body of the input
+	ParseBodyOption ReadInfoOption = iota
+	// DebugReadInfoOption enable debug mode for reading
+	DebugReadInfoOption
+)
+
+const (
+	// DecompressOption handles writing the decompressed output (not the compressed output) after extraction
+	DecompressOption UnpackOption = iota
+	// DebugUnpackOption enable debug mode for unpacking
+	DebugUnpackOption
+)
+
 type (
 	// ReadInfoOption defines reading options
-	ReadInfoOption struct{}
+	ReadInfoOption int
 	// UnpackOption handles writing options
-	UnpackOption struct{}
+	UnpackOption int
 
 	// Datum are special fields within the file to assist in reading/loading information
 	Datum struct {
@@ -132,6 +143,10 @@ func decompressGunzip(in []byte) ([]byte, error) {
 	return io.ReadAll(r)
 }
 
+func debugStatement(msg string) {
+	fmt.Fprintf(os.Stderr, "[debug] %s\n", msg)
+}
+
 // ReadInfo will read boot information from an input reader
 func ReadInfo(r Reader, opts ...ReadInfoOption) (BootInfo, error) {
 	if r == nil {
@@ -141,6 +156,11 @@ func ReadInfo(r Reader, opts ...ReadInfoOption) (BootInfo, error) {
 	hdr := Header{}
 	if err := binary.Read(r, binary.LittleEndian, &hdr); err != nil {
 		return BootInfo{}, err
+	}
+
+	debug := slices.Contains(opts, DebugReadInfoOption)
+	if debug {
+		debugStatement(fmt.Sprintf("%+v", hdr))
 	}
 
 	for _, c := range []check{
@@ -169,6 +189,9 @@ func ReadInfo(r Reader, opts ...ReadInfoOption) (BootInfo, error) {
 		if n == 0 {
 			return BootInfo{}, errors.New("invalid seek, zero")
 		}
+		if debug {
+			debugStatement(fmt.Sprintf("read: %d", n))
+		}
 	}
 	return BootInfo{header: hdr, body: sub}, nil
 }
@@ -192,6 +215,7 @@ func Unpack(src Package, dst io.Writer, opts ...UnpackOption) error {
 	if len(sub) == 0 {
 		return errors.New("no body")
 	}
+	debug := slices.Contains(opts, DebugUnpackOption)
 	if slices.Contains(opts, DecompressOption) {
 		found := false
 		hdr := src.Headers()
@@ -203,6 +227,9 @@ func Unpack(src Package, dst io.Writer, opts ...UnpackOption) error {
 		for _, v := range []decompressor{
 			{Gzip.Data(), decompressGunzip},
 		} {
+			if debug {
+				debugStatement(fmt.Sprintf("compression: %v", v.bodyType))
+			}
 			if t == fmt.Sprintf("%v", v.bodyType) {
 				found = true
 				d, err := v.fxn(sub)
@@ -225,6 +252,9 @@ func Unpack(src Package, dst io.Writer, opts ...UnpackOption) error {
 		for _, c := range []Datum{ARM, RISC} {
 			err := (check{val, c}).verify()
 			if err == nil {
+				if debug {
+					debugStatement(fmt.Sprintf("found type: %v", c.payload))
+				}
 				knownType = true
 				break
 			}
