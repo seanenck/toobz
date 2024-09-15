@@ -113,9 +113,9 @@ func (d Datum) Data() []uint8 {
 }
 
 func (c check) verify() error {
-	l := fmt.Sprintf("%v", c.left)
-	r := fmt.Sprintf("%v", c.right.Data())
-	if l != r {
+	if slices.Compare(c.left, c.right.Data()) != 0 {
+		l := fmt.Sprintf("%v", c.left)
+		r := fmt.Sprintf("%v", c.right.Data())
 		return errors.Join(ErrIsInvalidContent, fmt.Errorf("%s invalid data: %s != %s", c.right.Value(), l, r))
 	}
 	return nil
@@ -219,7 +219,6 @@ func Unpack(src Package, dst io.Writer, opts ...UnpackOption) error {
 	if slices.Contains(opts, DecompressOption) {
 		found := false
 		hdr := src.Headers()
-		t := fmt.Sprintf("%v", hdr.CompressionType[:])
 		type decompressor struct {
 			bodyType []uint8
 			fxn      func([]byte) ([]byte, error)
@@ -230,7 +229,7 @@ func Unpack(src Package, dst io.Writer, opts ...UnpackOption) error {
 			if debug {
 				debugStatement(fmt.Sprintf("compression: %v", v.bodyType))
 			}
-			if t == fmt.Sprintf("%v", v.bodyType) {
+			if slices.Compare(hdr.CompressionType[:], v.bodyType) == 0 {
 				found = true
 				d, err := v.fxn(sub)
 				if err != nil {
@@ -240,7 +239,7 @@ func Unpack(src Package, dst io.Writer, opts ...UnpackOption) error {
 			}
 		}
 		if !found {
-			return fmt.Errorf("unknown compression type: %s", t)
+			return fmt.Errorf("unknown compression type: %v", hdr.CompressionType[:])
 		}
 
 		subSize := len(sub)
